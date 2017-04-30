@@ -1,0 +1,36 @@
+#!/bin/bash
+
+source "$HOME/.config/user-dirs.dirs"
+
+IFS='
+'
+
+for FILE in $NAUTILUS_SCRIPT_SELECTED_FILE_PATHS
+do
+	MYDIR=`dirname $FILE`
+	BASENAME=`basename $FILE`
+	EXT=$(echo $BASENAME | cut -f 2 -d '.')
+	NAME_WITHOUT_EXT=$(echo $BASENAME | cut -f 1 -d '.')
+
+	DESKTOP_FILE=$XDG_DESKTOP_DIR/$BASENAME.desktop
+	
+	DESK_TEXT="[Desktop Entry]
+Version=1.0
+Type=Application
+Encoding=UTF-8
+Name=$NAME_WITHOUT_EXT
+Exec=bash -c \"cd '$MYDIR' && ./'`basename $FILE`'\""
+
+	if [ "$EXT" == "exe" ]; then
+	  ICONSDIR=$XDG_DESKTOP_DIR/.exeicons
+	  mkdir $XDG_DESKTOP_DIR/.exeicons
+	  wrestool -t 'group_icon' -x $FILE > $ICONSDIR/$BASENAME.ico
+	
+	  DESK_TEXT="$DESK_TEXT
+Icon=$ICONSDIR/$BASENAME.ico
+"
+	fi
+
+	echo "$DESK_TEXT" > $DESKTOP_FILE
+	chmod +x $DESKTOP_FILE
+done
