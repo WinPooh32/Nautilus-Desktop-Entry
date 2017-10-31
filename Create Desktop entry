@@ -5,6 +5,20 @@ source "$HOME/.config/user-dirs.dirs"
 IFS='
 '
 
+generateDesktopEntry() {
+	EXEC=$1
+	DESK_TEXT="
+[Desktop Entry]
+Version=1.0
+Type=Application
+Encoding=UTF-8
+Name=$NAME_WITHOUT_EXT
+Exec=$EXEC
+Path=$MYDIR
+StartupWMClass=$BASENAME
+"
+}
+
 for FILE in $NAUTILUS_SCRIPT_SELECTED_FILE_PATHS
 do
 	MYDIR=`dirname $FILE`
@@ -13,22 +27,23 @@ do
 	NAME_WITHOUT_EXT=$(echo $BASENAME | cut -f 1 -d '.')
 
 	DESKTOP_FILE=$XDG_DESKTOP_DIR/$BASENAME.desktop
-	
-	DESK_TEXT="[Desktop Entry]
-Version=1.0
-Type=Application
-Encoding=UTF-8
-Name=$NAME_WITHOUT_EXT
-Exec=bash -c \"cd '$MYDIR' && ./'`basename $FILE`'\""
+
+	generateDesktopEntry "bash -c './$BASENAME'"
 
 	if [ "$EXT" == "exe" ]; then
+	  generateDesktopEntry "wine start.exe /Unix ./'$BASENAME'"
+
 	  ICONSDIR=$XDG_DESKTOP_DIR/.exeicons
 	  mkdir $XDG_DESKTOP_DIR/.exeicons
-	  wrestool -t 'group_icon' -x $FILE > $ICONSDIR/$BASENAME.ico
+
+	  #extract .ico
+	  wrestool -t 'group_icon' -o $ICONSDIR/$BASENAME.ico -x $FILE
+	  #convert to png
+	  icotool -x -o $ICONSDIR/$BASENAME.png $ICONSDIR/$BASENAME.ico
 	
 	  DESK_TEXT="$DESK_TEXT
-Icon=$ICONSDIR/$BASENAME.ico
-"
+Icon=$ICONSDIR/$BASENAME.png
+"		
 	fi
 
 	echo "$DESK_TEXT" > $DESKTOP_FILE
