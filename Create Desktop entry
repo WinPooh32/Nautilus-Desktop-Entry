@@ -19,6 +19,7 @@ Path=$MYDIR
 StartupWMClass=$BASENAME"
 }
 
+
 EXECUTABLE=false
 checkExecutable(){
 	if [ ! -z "`file $1 | grep 'executable'`" ]; then
@@ -39,13 +40,12 @@ checkIcon(){
 	fi
 }
 
+
 EXECUTABLE_FOUND=false
 DONE=false
 
 for FILE in $NAUTILUS_SCRIPT_SELECTED_FILE_PATHS
 do
-	echo "$FILE"
-
 	MYDIR=`dirname $FILE`
 	BASENAME=`basename $FILE`
 	EXT=$(echo $BASENAME | cut -f 2 -d '.')
@@ -58,32 +58,39 @@ do
 	checkExecutable $FILE
 	checkIcon $EXT
 
+	echo "EXECUTABLE $EXECUTABLE"
+	echo "EXECUTABLE_FOUND $EXECUTABLE_FOUND"
+	echo "$EXT"
+
 	#first executable found and windows .exe
-	if [ $EXECUTABLE ] && [ ! $EXECUTABLE_FOUND ] &&  [ "$EXT" == "exe" ]; then
+	if [ "$EXECUTABLE" == true ] && [ "$EXECUTABLE_FOUND" == false ] && [ "$EXT" == "exe" ]; then
 		generateDesktopEntry "wine start.exe /Unix ./'$BASENAME'"
 
-		ICONSDIR=$XDG_DESKTOP_DIR/.exeicons
-		mkdir $XDG_DESKTOP_DIR/.exeicons
+		#extract icon if not selected
+		if  [ -z $DESK_ICON ]; then
+			ICONSDIR=$XDG_DESKTOP_DIR/.exeicons
+			mkdir $XDG_DESKTOP_DIR/.exeicons
 
-		#extract .ico
-		wrestool -t 'group_icon' -o $ICONSDIR/$BASENAME.ico -x $FILE
-		#convert to png
-		icotool -x -o $ICONSDIR/$BASENAME.png $ICONSDIR/$BASENAME.ico
+			#extract .ico
+			wrestool -t 'group_icon' -o $ICONSDIR/$BASENAME.ico -x $FILE
+			#convert to png
+			icotool -x -o $ICONSDIR/$BASENAME.png $ICONSDIR/$BASENAME.ico
 
-		DESK_ICON="$ICONSDIR/$BASENAME.png"	
-	
+			DESK_ICON="$ICONSDIR/$BASENAME.png"
+		fi
 	elif [ "$ICON" == true ]; then
 		DESK_ICON=$FILE
 	fi
 
 	if [ "$EXECUTABLE" == true ]; then
-		EXECUTABLE_FOUND=true	
+		EXECUTABLE_FOUND=true
 	fi
 
 	if [ "$EXECUTABLE_FOUND" == true ] && [ ! -z $DESK_ICON ]; then
 		break
 	fi
 done
+
 
 DESK_TEXT="$DESK_TEXT
 Icon=$DESK_ICON"
