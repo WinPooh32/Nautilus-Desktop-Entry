@@ -2,6 +2,7 @@
 
 source "$HOME/.config/user-dirs.dirs"
 
+#it's important
 IFS='
 '
 
@@ -15,12 +16,36 @@ Encoding=UTF-8
 Name=$NAME_WITHOUT_EXT
 Exec=$EXEC
 Path=$MYDIR
-StartupWMClass=$BASENAME
-"
+StartupWMClass=$BASENAME"
 }
+
+EXECUTABLE=false
+checkExecutable(){
+	if [ ! -z "`file $1 | grep 'executable'`" ]; then
+		EXECUTABLE=true
+	else
+		EXECUTABLE=false
+	fi
+}
+
+
+ICON_FORMAT_LIST="ico png gif tif jpg jpeg bmp"
+ICON=false
+checkIcon(){
+	if [ ! -z "`echo "$ICON_FORMAT_LIST" | grep $1`" ]; then
+		ICON=true
+	else
+		ICON=false
+	fi
+}
+
+EXECUTABLE_FOUND=false
+DONE=false
 
 for FILE in $NAUTILUS_SCRIPT_SELECTED_FILE_PATHS
 do
+	echo "$FILE"
+
 	MYDIR=`dirname $FILE`
 	BASENAME=`basename $FILE`
 	EXT=$(echo $BASENAME | cut -f 2 -d '.')
@@ -30,22 +55,38 @@ do
 
 	generateDesktopEntry "bash -c './$BASENAME'"
 
-	if [ "$EXT" == "exe" ]; then
-	  generateDesktopEntry "wine start.exe /Unix ./'$BASENAME'"
+	checkExecutable $FILE
+	checkIcon $EXT
 
-	  ICONSDIR=$XDG_DESKTOP_DIR/.exeicons
-	  mkdir $XDG_DESKTOP_DIR/.exeicons
+	#first executable found and windows .exe
+	if [ $EXECUTABLE ] && [ ! $EXECUTABLE_FOUND ] &&  [ "$EXT" == "exe" ]; then
+		generateDesktopEntry "wine start.exe /Unix ./'$BASENAME'"
 
-	  #extract .ico
-	  wrestool -t 'group_icon' -o $ICONSDIR/$BASENAME.ico -x $FILE
-	  #convert to png
-	  icotool -x -o $ICONSDIR/$BASENAME.png $ICONSDIR/$BASENAME.ico
+		ICONSDIR=$XDG_DESKTOP_DIR/.exeicons
+		mkdir $XDG_DESKTOP_DIR/.exeicons
+
+		#extract .ico
+		wrestool -t 'group_icon' -o $ICONSDIR/$BASENAME.ico -x $FILE
+		#convert to png
+		icotool -x -o $ICONSDIR/$BASENAME.png $ICONSDIR/$BASENAME.ico
+
+		DESK_ICON="$ICONSDIR/$BASENAME.png"	
 	
-	  DESK_TEXT="$DESK_TEXT
-Icon=$ICONSDIR/$BASENAME.png
-"		
+	elif [ "$ICON" == true ]; then
+		DESK_ICON=$FILE
 	fi
 
-	echo "$DESK_TEXT" > $DESKTOP_FILE
-	chmod +x $DESKTOP_FILE
+	if [ "$EXECUTABLE" == true ]; then
+		EXECUTABLE_FOUND=true	
+	fi
+
+	if [ "$EXECUTABLE_FOUND" == true ] && [ ! -z $DESK_ICON ]; then
+		break
+	fi
 done
+
+DESK_TEXT="$DESK_TEXT
+Icon=$DESK_ICON"
+
+echo "$DESK_TEXT" > $DESKTOP_FILE
+chmod +x $DESKTOP_FILE
